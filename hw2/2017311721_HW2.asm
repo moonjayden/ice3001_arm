@@ -1,0 +1,612 @@
+
+	.cdecls C, LIST, "Compiler.h"
+;------------------------------------------------
+;		.data
+;------------------------------------------------
+GPIO_BASE			.equ	0x40000000
+NVIC_BASE			.equ	0xe0000000
+RCGCGPIO			.equ	0x608
+RCGC2				.equ	0x108
+
+GPIOHBCTL			.equ	0x06C
+GPIODIR				.equ	0x400
+GPIOAFSEL			.equ	0x420
+GPIODR8R			.equ	0x508
+GPIOPUR				.equ	0x510
+GPIODEN				.equ	0x51C
+GPIOAMSEL			.equ	0x528
+GPIOPCTL			.equ	0x52C
+GPIOLOCK			.equ	0x520
+GPIOCR				.equ	0x524
+
+GPIODATA			.equ	0x000
+EN3					.equ	0x10C
+GPIOIM				.equ	0x410
+GPIOICR				.equ	0x41C
+
+SW_UP				.equ	0x1E
+SW_DOWN				.equ	0x1D
+SW_RIGHT			.equ	0x1B
+SW_LEFT				.equ	0x17
+SW_RESET			.equ	0x0F
+;--------------------------------------------------
+             .text                           ; Program Start
+             .global RESET                   ; Define entry point
+             .align	4
+			 .sect ".text"
+
+             .global Switch_Init
+             .global Switch_Input
+			 .global num_1
+			 .global num_3
+
+             .global LED_Init
+             .global LED_On
+             .global LED_Off
+
+             .global Blink_slow
+             .global Blink_fast
+
+;------------------------------------------------
+;			switch initializition
+;------------------------------------------------
+
+Switch_Init:
+		mov r0, #GPIO_BASE	;RCGC : General-Purpose Input/Output Run Mode Clock Gating Control
+		mov r1, #0xFE000
+		add r1, r1, r0
+		mov r0, #RCGCGPIO
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x800
+		str r0, [r1]
+		nop
+		nop
+
+		mov r0, #GPIO_BASE	;HBCTL : High-Performance Bus Control
+		mov r1, #0xFE000
+		add r1, r1, r0
+		mov r0, #GPIOHBCTL
+		add r1, r1, r0
+
+		mov r0, #0x800
+		str r0, [r1]
+		nop
+		nop
+
+		mov r0, #GPIO_BASE	;DIR
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIODIR
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		bic r0, r0, #0x1f
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;AFSEL : Alternate Function Select
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIOAFSEL
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		bic r0, r0, #0x1f
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;PUR
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIOPUR
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x1f
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;DEN
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIODEN
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x1f
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;AMSEL : Analog Mode Select
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIOAMSEL
+		add r1, r1, r0
+
+		mov r0, #0
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;PCTL : Port Control
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIOPCTL
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x1f;#0x000f000f
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;LOCK
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIOLOCK
+		add r1, r1, r0
+
+		mov r0, #GPIO_BASE
+		mov r2, #0xc400000
+		add r2, r2, r0
+		mov r0, #0xf4000
+		add r2, r2, r0
+		mov r0, #0x34b
+		add r2, r2, r0
+
+		ldr r0, [r1]
+		orr r0, r0, r2
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;CR
+		mov r1, #0x63000
+		add r1, r1, r0
+		mov r0, #GPIOCR
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		mov r2, #0x00000000
+		bic r0, r0, r2
+		str r0, [r1]
+;------------------------------------------------
+;			led initializition
+;------------------------------------------------
+
+LED_Init:
+		mov r0, #GPIO_BASE	;RCGC2 : Run Mode Clock Gating Control Register 2
+		mov r1, #0xFE000
+		add r1, r1, r0
+		mov r0, #RCGC2
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x40
+		str r0, [r1]
+		nop
+		nop
+
+		mov r0, #GPIO_BASE	;DIR
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #GPIODIR
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x04
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;AFSEL : Alternate Function Select
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #GPIOAFSEL
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		bic r0, r0, #0x04
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;GPIODR8R : GPIO 8mA Drive Select
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #GPIODR8R
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x04
+		str r0, [r1]
+
+		mov r0, #GPIO_BASE	;DEN
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #GPIODEN
+		add r1, r1, r0
+
+		ldr r0, [r1]
+		orr r0, r0, #0x04
+		str r0, [r1]
+
+
+Switch_Input:
+
+		mov r5, #GPIO_BASE
+		mov r1, #0x63000
+		add r1, r1, r5
+		mov r5, #0x7c
+		add r1, r1, r5
+
+		ldr r5, [r1]
+
+DELAY:	MOVW r3,#0xffff
+
+_DELAY_LOOP:
+		CBZ r3,_DELAY_EXIT		;Compare and Branch on Zero
+		sub r3,r3,#1
+		B _DELAY_LOOP
+_DELAY_EXIT:
+
+		cmp r5, #SW_UP
+		BEQ _up
+
+		cmp r5, #SW_DOWN
+		BEQ _down
+
+		cmp r5, #SW_RIGHT
+		BEQ _right
+
+		cmp r5, #SW_LEFT
+		BEQ _left
+
+		cmp r5, #SW_RESET
+		BEQ _reset
+
+		mov r1, #'A'
+		b _EXIT
+
+
+
+LED_On:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x04
+
+		str r5, [r1]
+		b _EXIT
+
+LED_Off:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+
+		str r5, [r1]
+		b _EXIT
+;////////////////////////////////////////////////////////////
+Blink_slow:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x04
+
+		str r5, [r1]
+
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #5
+_DELAY_ON1_LOOP_s:
+		CBZ r0,_DELAY_OFF1_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON1_LOOP_s
+_DELAY_OFF1_s:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+	 	MOV r0, r0, LSL #5
+
+_DELAY_OFF1_LOOP_s:
+		CBZ r0,_DELAY_ON2_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF1_LOOP_s
+
+_DELAY_ON2_s:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #5
+
+_DELAY_ON2_LOOP_s:
+		CBZ r0,_DELAY_OFF2_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON2_LOOP_s
+_DELAY_OFF2_s:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+	  	MOV r0, r0, LSL #5
+_DELAY_OFF2_LOOP_s:
+		CBZ r0,_DELAY_ON3_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF2_LOOP_s
+
+_DELAY_ON3_s:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #5
+_DELAY_ON3_LOOP_s:
+		CBZ r0,_DELAY_OFF3_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON3_LOOP_s
+_DELAY_OFF3_s:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #5
+_DELAY_OFF3_LOOP_s:
+		CBZ r0,_DELAY_ON4_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF3_LOOP_s
+
+_DELAY_ON4_s:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #5
+_DELAY_ON4_LOOP_s:
+		CBZ r0,_DELAY_OFF4_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON4_LOOP_s
+_DELAY_OFF4_s:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+	  	MOV r0, r0, LSL #5
+_DELAY_OFF4_LOOP_s:
+		CBZ r0,_DELAY_ON5_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF4_LOOP_s
+
+_DELAY_ON5_s:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #5
+_DELAY_ON5_LOOP_s:
+		CBZ r0,_DELAY_OFF5_s		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON5_LOOP_s
+_DELAY_OFF5_s:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+
+_DELAY_EXIT_s:
+		mov r1, #'A'
+		b _EXIT
+
+;////////////////////////////////////////////////////////////
+Blink_fast:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x04
+
+		str r5, [r1]
+
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #3
+_DELAY_ON1_LOOP_f:
+		CBZ r0,_DELAY_OFF1_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON1_LOOP_f
+_DELAY_OFF1_f:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #3
+
+_DELAY_OFF1_LOOP_f:
+		CBZ r0,_DELAY_ON2_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF1_LOOP_f
+
+_DELAY_ON2_f:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #3
+_DELAY_ON2_LOOP_f:
+		CBZ r0,_DELAY_OFF2_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON2_LOOP_f
+_DELAY_OFF2_f:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #3
+_DELAY_OFF2_LOOP_f:
+		CBZ r0,_DELAY_ON3_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF2_LOOP_f
+_DELAY_ON3_f:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #3
+_DELAY_ON3_LOOP_f:
+		CBZ r0,_DELAY_OFF3_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON3_LOOP_f
+_DELAY_OFF3_f:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #3
+_DELAY_OFF3_LOOP_f:
+		CBZ r0,_DELAY_ON4_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF3_LOOP_f
+
+_DELAY_ON4_f:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #3
+_DELAY_ON4_LOOP_f:
+		CBZ r0,_DELAY_OFF4_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON4_LOOP_f
+_DELAY_OFF4_f:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+		MOV r0,#0xffff
+		MOV r0, r0, LSL #3
+_DELAY_OFF4_LOOP_f:
+		CBZ r0,_DELAY_ON5_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_OFF4_LOOP_f
+
+_DELAY_ON5_f:
+				mov r0, #GPIO_BASE
+				mov r1, #0x26000
+				add r1, r1, r0
+				mov r0, #0x10
+				add r1, r1, r0
+				mov r5, #0x04
+				str r5, [r1]
+				MOV r0,#0xffff
+				MOV r0, r0, LSL #3
+_DELAY_ON5_LOOP_f:
+		CBZ r0,_DELAY_OFF5_f		;Compare and Branch on Zero
+		sub r0,r0,#1
+		B _DELAY_ON5_LOOP_f
+_DELAY_OFF5_f:
+		mov r0, #GPIO_BASE
+		mov r1, #0x26000
+		add r1, r1, r0
+		mov r0, #0x10
+		add r1, r1, r0
+		mov r5, #0x00
+		str r5, [r1]
+
+_DELAY_EXIT_f:
+		mov r1, #'A'
+		b _EXIT
+
+
+
+
+;////////////////////////////////////////////////////////////
+_up:
+		mov r1, #'B'
+		b _EXIT
+
+_down:
+		mov r1, #'C'
+		b _EXIT
+
+_right:
+		mov r1, #'D'
+		b _EXIT
+
+_left:
+		mov r1, #'E'
+		b _EXIT
+
+_reset:
+		mov r1, #'F'
+		b _EXIT
+
+_EXIT:
+		bx lr
+
+num_1:
+		mov r0, r1
+		bx lr
+
+num_3:
+		mov r0, #'D'
+		bx lr
+
+			.retain
+			.retainrefs
